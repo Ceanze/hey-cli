@@ -52,6 +52,10 @@ fn main() {
 		TokenDefinition::new("COMMAND", vec!["remind", "create"]),
 		TokenDefinition::new("SUBJECT", vec!["me", "us", "them"]),
 		TokenDefinition::new("KEYWORD", vec!["at", "to", "in"]),
+		TokenDefinition::new_with_regex("NUMBER", regex::Regex::new(r"\d+").unwrap()),
+		TokenDefinition::new_with_regex("TIME", regex::Regex::new(r"\d+:\d+").unwrap()),
+		TokenDefinition::new_with_regex("RELATIVE_TIME", regex::Regex::new(r"\d+:\d+").unwrap()),
+		TokenDefinition::new_with_regex("COUNTABLE_TIME", regex::Regex::new(r"\d+:\d+").unwrap()),
 		TokenDefinition::new("WORD", vec!["*"]),
 		];
 	let tokenizer = Tokenizer::new(token_definitions);
