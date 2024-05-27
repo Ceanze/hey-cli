@@ -4,15 +4,18 @@ mod add;
 mod create;
 mod show;
 mod thesaurus;
+mod tokenizer;
 
 use clap::{Parser, Subcommand};
+use tokenizer::{TokenDefinition, Tokenizer};
 
 #[derive(Parser)]
 #[command(name = "Hey!")]
 #[command(about = "Hey is a to quickly write down your thoughts", long_about = None)]
 struct Cli {
-    #[command(subcommand)]
-    command: Commands,
+	// #[command(subcommand)]
+	// command: Commands,
+	input: Vec<String>
 }
 
 /*
@@ -29,26 +32,42 @@ All commands should be available as synonyms as well by calling "hey -- "
 5c. Show: hey show me all lists where X is          - (Non-prio) Shows all the lists where item/string is existing, i.e. a filter
 */
 
-#[derive(Subcommand)]
-enum Commands {
-    Remind { input: Vec<String> },
-    Note { input: Vec<String> },
-    Add { input: Vec<String> },
-    Create { input: Vec<String> },
-    Show { input: Vec<String> }
-}
+// #[derive(Subcommand)]
+// enum Commands {
+// 	Remind { input: Vec<String> },
+// 	Note { input: Vec<String> },
+// 	Add { input: Vec<String> },
+// 	Create { input: Vec<String> },
+// 	Show { input: Vec<String> }
+// }
 
 fn main() {
-    let cli = Cli::parse();
+	let cli = Cli::parse();
 
-    let mut thesaurus = thesaurus::Thesaurus::new();
-    thesaurus::add_default_synonyms(&mut thesaurus);
+	let mut thesaurus = thesaurus::Thesaurus::new();
+	thesaurus::add_default_synonyms(&mut thesaurus);
 
-    match &cli.command {
-        Commands::Remind { input } => remind::execute(input),
-        Commands::Note { input } => note::execute(input),
-        Commands::Add { input } => add::execute(input),
-        Commands::Create { input } => create::execute(input),
-        Commands::Show { input } => show::execute(input)
-    }
+	let token_definitions = vec![
+		TokenDefinition::new("CLI", vec!["hey"]),
+		TokenDefinition::new("COMMAND", vec!["remind", "create"]),
+		TokenDefinition::new("SUBJECT", vec!["me", "us", "them"]),
+		TokenDefinition::new("KEYWORD", vec!["at", "to", "in"]),
+		TokenDefinition::new("WORD", vec!["*"]),
+		];
+	let tokenizer = Tokenizer::new(token_definitions);
+
+	let tokens = tokenizer.tokenize(cli.input.join(" "));
+	if let Some(tokens) = tokens {
+		for token in tokens {
+			println!("{}(\"{}\")", token.name, token.value);
+		}
+	}
+
+	// match &cli.command {
+	// 	Commands::Remind { input } => remind::execute(input),
+	// 	Commands::Note { input } => note::execute(input),
+	// 	Commands::Add { input } => add::execute(input),
+	// 	Commands::Create { input } => create::execute(input),
+	// 	Commands::Show { input } => show::execute(input)
+	// }
 }
