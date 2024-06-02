@@ -5,8 +5,10 @@ mod create;
 mod show;
 mod thesaurus;
 mod tokenizer;
+mod parser;
 
 use clap::{Parser, Subcommand};
+use parser::Rule;
 use tokenizer::{TokenDefinition, Tokenizer};
 
 #[derive(Parser)]
@@ -61,9 +63,29 @@ fn main() {
 	let tokenizer = Tokenizer::new(token_definitions);
 
 	let tokens = tokenizer.tokenize(cli.input.join(" "));
+
+	let rules = vec![
+		Rule::new("ReminderCommand", vec!["ReminderNode ContentNode TimeNode".to_string()]),
+		Rule::new("ReminderNode", vec!["COMMAND(remind) SUBJECT KEYWORD(to)".to_string()]),
+		Rule::new("TimeNode", vec!["KEYWORD(at) NUMBER".to_string()]),
+		Rule::new("ContentNode", vec!["COMMAND".to_string(), "SUBJECT".to_string(), "KEYWORD".to_string(), "WORD".to_string()])
+	];
+
+	let mut parser = parser::Parser::new(rules);
+
 	if let Some(tokens) = tokens {
-		for token in tokens {
+		for token in &tokens {
 			println!("{}(\"{}\")", token.name, token.value);
+		}
+
+		match parser.parse(tokens.as_ref()) {
+			Ok(node) => print_node(&node, 0),
+			Err(err) => {
+				match err {
+						parser::ParseError::UnexpectedToken(val) => println!("{val}"),
+						parser::ParseError::UnexpectedEndOfInput => println!("eof"),
+					}
+			},
 		}
 	}
 
@@ -74,4 +96,25 @@ fn main() {
 	// 	Commands::Create { input } => create::execute(input),
 	// 	Commands::Show { input } => show::execute(input)
 	// }
+}
+
+fn print_node(node: &parser::Node, depth: i32) {
+	println!("{: >2}Node: {}", " ", node.name);
+	println!("{: >2}Children:", " ");
+	for child in &node.children {
+		print_symbol(child, depth)
+	}
+}
+
+fn print_symbol(symbol: &parser::Symbol, depth: i32) {
+	match symbol {
+		parser::Symbol::Terminal(leaf) => println!("Leaf: {}, Value: {}", leaf.name, leaf.value),
+		parser::Symbol::NonTerminal(node) => {
+			println!("Node: {}", node.name);
+			println!("Children:");
+			for child in &node.children {
+				print_symbol(child, depth)
+			}
+		},
+	}
 }
