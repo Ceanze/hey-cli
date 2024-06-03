@@ -68,22 +68,22 @@ fn main() {
 		Rule::new("ReminderCommand", vec!["ReminderNode ContentNode TimeNode".to_string()]),
 		Rule::new("ReminderNode", vec!["COMMAND(remind) SUBJECT KEYWORD(to)".to_string()]),
 		Rule::new("TimeNode", vec!["KEYWORD(at) NUMBER".to_string()]),
-		Rule::new("ContentNode", vec!["COMMAND".to_string(), "SUBJECT".to_string(), "KEYWORD".to_string(), "WORD".to_string()])
+		Rule::new("ContentNode", vec!["ContentNode WORD".to_string(), "COMMAND".to_string(), "SUBJECT".to_string(), "KEYWORD".to_string(), "WORD".to_string()])
 	];
 
 	let mut parser = parser::Parser::new(rules);
 
 	if let Some(tokens) = tokens {
-		for token in &tokens {
-			println!("{}(\"{}\")", token.name, token.value);
-		}
+		// for token in &tokens {
+		// 	println!("{}(\"{}\")", token.name, token.value);
+		// }
 
 		match parser.parse(tokens.as_ref()) {
-			Ok(node) => print_node(&node, 0),
+			Ok(node) => print_tree(&node),
 			Err(err) => {
 				match err {
 						parser::ParseError::UnexpectedToken(val) => println!("{val}"),
-						parser::ParseError::UnexpectedEndOfInput => println!("eof"),
+						parser::ParseError::UnexpectedEndOfInput(stack) => println!("Parser reached eof without reducing everything. Stack at error: \n{}", stack),
 					}
 			},
 		}
@@ -98,23 +98,24 @@ fn main() {
 	// }
 }
 
-fn print_node(node: &parser::Node, depth: i32) {
-	println!("{: >2}Node: {}", " ", node.name);
-	println!("{: >2}Children:", " ");
+fn print_tree(node: &parser::Node) {
+	println!("AST:");
+	print_node(node, 1);
+}
+
+fn print_node(node: &parser::Node, depth: usize) {
+	println!("{: >depth$}Node: {}", " ", node.name);
+	println!("{: >depth$}Children:", " ");
 	for child in &node.children {
-		print_symbol(child, depth)
+		print_symbol(child, depth + 1)
 	}
 }
 
-fn print_symbol(symbol: &parser::Symbol, depth: i32) {
+fn print_symbol(symbol: &parser::Symbol, depth: usize) {
 	match symbol {
-		parser::Symbol::Terminal(leaf) => println!("Leaf: {}, Value: {}", leaf.name, leaf.value),
-		parser::Symbol::NonTerminal(node) => {
-			println!("Node: {}", node.name);
-			println!("Children:");
-			for child in &node.children {
-				print_symbol(child, depth)
-			}
+		parser::Symbol::Terminal(leaf) => {
+			println!("{: >depth$}{}({})", " ", leaf.name, leaf.value);
 		},
+		parser::Symbol::NonTerminal(node) => print_node(&node, depth + 1),
 	}
 }

@@ -31,7 +31,7 @@ pub enum Match {
 #[derive(Debug)]
 pub enum ParseError {
     UnexpectedToken(String),
-    UnexpectedEndOfInput,
+    UnexpectedEndOfInput(String),
 }
 
 #[derive(Debug, Clone)]
@@ -61,9 +61,6 @@ impl Parser {
 				self.shift(token.clone());
 			}
 
-			println!("Stack before reduction, after shift");
-			self.print_stack();
-
 			while self.reduce(tokens) {}
 		}
 
@@ -73,7 +70,7 @@ impl Parser {
 			}
 		}
 
-		Err(ParseError::UnexpectedEndOfInput)
+		Err(ParseError::UnexpectedEndOfInput(self.stringify_stack()))
 	}
 
 	fn shift(&mut self, token: Token) {
@@ -102,22 +99,17 @@ impl Parser {
 		// If lookahead is part of match, do not reduce
 		if let Some(lookahead) = self.lookahead(tokens) {
 			if self.is_lookahead_part_of_match(lookahead) {
-				println!("Lookahead {} is part of match", lookahead.name);
 				return false;
 			}
 		}
 
 		// Else we can check if a rule is possible to use to reduce
 		if let Some((rule_name, full_match_size)) = self.get_full_match_size() {
-			println!("Found stack match {}", rule_name);
 			let matched_symbols = self.stack.split_off(self.stack.len() - full_match_size);
 			self.stack.push(Symbol::NonTerminal(Box::new(Node{
 				name: rule_name.to_string(),
 				children: matched_symbols
 			})));
-
-			println!("Stack after reduction:");
-			self.print_stack();
 
 			return true;
 		}
@@ -125,22 +117,17 @@ impl Parser {
 		false
 	}
 
-	fn print_stack(&self) {
-		println!("Stack start: ----");
+	fn stringify_stack(&self) -> String {
+		let mut stack_string = String::new();
+		stack_string.push_str("-- Stack start --\n");
 		for symbol in &self.stack {
-			match symbol {
-				Symbol::Terminal(token) => println!("Token: {}, value: {}", token.name, token.value),
-				Symbol::NonTerminal(node) => println!("Node: {}", node.name),
-			}
+			stack_string.push_str(match symbol {
+				Symbol::Terminal(token) => format!("Token: {}, value: {}\n", token.name, token.value),
+				Symbol::NonTerminal(node) => format!("Node: {}\n", node.name),
+			}.as_str());
 		}
-		println!("Stack end: -----");
-	}
-
-	fn create_node(&self, name: &str, matched_symbols: Vec<Symbol>) -> Box<Node> {
-		Box::new(Node{
-			name: name.to_string(),
-			children: matched_symbols
-		})
+		stack_string.push_str("-- Stack end --");
+		stack_string
 	}
 
 	fn is_lookahead_part_of_match(&self, lookahead: &Token) -> bool {
@@ -193,7 +180,6 @@ impl Parser {
 			for (pattern_idx, pattern_str) in pattern_symbols.enumerate() {
 				if pattern_idx >= slice_size {
 					if pattern_match {
-						println!("Found partial match for {}, with slice size: {}", pattern, slice_size);
 						return Match::Partial(slice_size);
 					}
 
@@ -208,6 +194,10 @@ impl Parser {
 							Symbol::Terminal(stack_token) => stack_token.name == pattern_token.name && (stack_token.value == pattern_token.value || pattern_token.value.is_empty()),
 							Symbol::NonTerminal(stack_node) => stack_node.name == pattern_token.name,
 						};
+
+					if !pattern_match {
+						break;
+					}
 				} else {
 					panic!("How did we get here?");
 				}
