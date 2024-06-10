@@ -6,8 +6,10 @@ mod show;
 mod thesaurus;
 mod tokenizer;
 mod parser;
+mod parse_table;
 
 use clap::{Parser, Subcommand};
+use parse_table::{ParseTable, TableRule};
 use parser::Rule;
 use tokenizer::{TokenDefinition, Tokenizer};
 
@@ -68,26 +70,45 @@ fn main() {
 		Rule::new("ReminderCommand", vec!["ReminderNode ContentNode TimeNode".to_string()]),
 		Rule::new("ReminderNode", vec!["COMMAND(remind) SUBJECT KEYWORD(to)".to_string()]),
 		Rule::new("TimeNode", vec!["KEYWORD(at) NUMBER".to_string()]),
-		Rule::new("ContentNode", vec!["ContentNode WORD".to_string(), "COMMAND".to_string(), "SUBJECT".to_string(), "KEYWORD".to_string(), "WORD".to_string()])
+		Rule::new("ContentNode", vec![
+			"ContentNode GenNode0".to_string(),
+			"GenNode0".to_string()]),
+		Rule::new("GenNode0", vec!["SUBJECT".to_string(), "COMMAND".to_string(), "KEYWORD".to_string(), "WORD".to_string()])
 	];
 
-	let mut parser = parser::Parser::new(rules);
+	// let parse_table = ParseTable::new(vec![
+	// 	TableRule::new("E".to_string(), vec!["A".to_string(), "B".to_string()]),
+	// 	TableRule::new("A".to_string(), vec!["WORD(a)".to_string(), "WORD(b)".to_string()]),
+	// 	TableRule::new("B".to_string(), vec!["B".to_string(), "B".to_string()]),
+	// 	TableRule::new("B".to_string(), vec!["WORD(a)".to_string()]),
+	// 	TableRule::new("B".to_string(), vec!["WORD(b)".to_string()]),
+	// 	]);
+	let parse_table = ParseTable::new(vec![
+		TableRule::new("E".to_string(), vec!["E".to_string(), "WORD(*)".to_string(), "B".to_string()]),
+		TableRule::new("E".to_string(), vec!["E".to_string(), "WORD(+)".to_string(), "B".to_string()]),
+		TableRule::new("E".to_string(), vec!["B".to_string()]),
+		TableRule::new("B".to_string(), vec!["WORD(0)".to_string()]),
+		TableRule::new("B".to_string(), vec!["WORD(1)".to_string()]),
+		]);
+	parse_table.print_table();
 
-	if let Some(tokens) = tokens {
-		// for token in &tokens {
-		// 	println!("{}(\"{}\")", token.name, token.value);
-		// }
+	// let mut parser = parser::Parser::new(rules);
 
-		match parser.parse(tokens.as_ref()) {
-			Ok(node) => print_tree(&node),
-			Err(err) => {
-				match err {
-						parser::ParseError::UnexpectedToken(val) => println!("{val}"),
-						parser::ParseError::UnexpectedEndOfInput(stack) => println!("Parser reached eof without reducing everything. Stack at error: \n{}", stack),
-					}
-			},
-		}
-	}
+	// if let Some(tokens) = tokens {
+	// 	// for token in &tokens {
+	// 	// 	println!("{}(\"{}\")", token.name, token.value);
+	// 	// }
+
+	// 	match parser.parse(tokens.as_ref()) {
+	// 		Ok(node) => print_tree(&node),
+	// 		Err(err) => {
+	// 			match err {
+	// 					parser::ParseError::UnexpectedToken(val) => println!("{val}"),
+	// 					parser::ParseError::UnexpectedEndOfInput(stack) => println!("Parser reached eof without reducing everything. Stack at error: \n{}", stack),
+	// 				}
+	// 		},
+	// 	}
+	// }
 
 	// match &cli.command {
 	// 	Commands::Remind { input } => remind::execute(input),
