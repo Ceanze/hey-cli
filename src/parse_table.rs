@@ -174,19 +174,6 @@ impl ParseTable {
 		let mut set_index: usize = 0;
 		while !set_queue.is_empty() {
 			let set = set_queue.pop_front().unwrap();
-			if let Some(identical_set_index) = self.find_identical_set_with_index(&set) {
-				for processed_set in &mut self.sets {
-					for rule in &mut processed_set.rules {
-						if let Some(next_set_index) = rule.next_set_index {
-							if next_set_index == set.index {
-								rule.next_set_index = Some(identical_set_index);
-							}
-						}
-					}
-				}
-
-				continue;
-			}
 
 			let mut full_set = self.expand_set(set)?;
 			let new_sets = self.get_advanced_sets(&mut full_set, set_index + set_queue.len() + 1, &set_queue);
@@ -198,16 +185,6 @@ impl ParseTable {
 		self.populate_reductions();
 
 		Ok(())
-	}
-
-	fn find_identical_set_with_index(&self, new_set: &Set) -> Option<usize> {
-		for set in &self.sets {
-			if set.rules == new_set.rules {
-				return Some(set.index);
-			}
-		}
-
-		return None;
 	}
 
 	fn add_start_rule(&mut self) -> Result<&TableRule, ParseTableError> {
