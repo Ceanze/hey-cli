@@ -76,20 +76,20 @@ fn main() {
 		Rule::new("GenNode0", vec!["SUBJECT".to_string(), "COMMAND".to_string(), "KEYWORD".to_string(), "WORD".to_string()])
 	];
 
-	// let parse_table = ParseTable::new(vec![
-	// 	TableRule::new("E".to_string(), vec!["A".to_string(), "B".to_string()]),
-	// 	TableRule::new("A".to_string(), vec!["WORD(a)".to_string(), "WORD(b)".to_string()]),
-	// 	TableRule::new("B".to_string(), vec!["B".to_string(), "B".to_string()]),
-	// 	TableRule::new("B".to_string(), vec!["WORD(a)".to_string()]),
-	// 	TableRule::new("B".to_string(), vec!["WORD(b)".to_string()]),
-	// 	]);
 	let parse_table = ParseTable::new(vec![
-		TableRule::new("E".to_string(), vec!["E".to_string(), "WORD(*)".to_string(), "B".to_string()]),
-		TableRule::new("E".to_string(), vec!["E".to_string(), "WORD(+)".to_string(), "B".to_string()]),
-		TableRule::new("E".to_string(), vec!["B".to_string()]),
-		TableRule::new("B".to_string(), vec!["WORD(0)".to_string()]),
-		TableRule::new("B".to_string(), vec!["WORD(1)".to_string()]),
+		TableRule::new("E".to_string(), vec!["A".to_string(), "B".to_string()]),
+		TableRule::new("A".to_string(), vec!["WORD(a)".to_string(), "WORD(b)".to_string()]),
+		TableRule::new("B".to_string(), vec!["B".to_string(), "B".to_string()]),
+		TableRule::new("B".to_string(), vec!["WORD(a)".to_string()]),
+		TableRule::new("B".to_string(), vec!["WORD(b)".to_string()]),
 		]);
+	// let parse_table = ParseTable::new(vec![
+	// 	TableRule::new("E".to_string(), vec!["E".to_string(), "WORD(*)".to_string(), "B".to_string()]),
+	// 	TableRule::new("E".to_string(), vec!["E".to_string(), "WORD(+)".to_string(), "B".to_string()]),
+	// 	TableRule::new("E".to_string(), vec!["B".to_string()]),
+	// 	TableRule::new("B".to_string(), vec!["WORD(0)".to_string()]),
+	// 	TableRule::new("B".to_string(), vec!["WORD(1)".to_string()]),
+	// 	]);
 	parse_table.print_table();
 
 	// let mut parser = parser::Parser::new(rules);

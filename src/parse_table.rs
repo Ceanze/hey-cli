@@ -14,10 +14,39 @@ pub enum Action<'a> {
 	Error(ParseTableError)
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 struct Set {
 	index: usize,
 	rules: Vec<TableRule>
+}
+
+impl Set {
+	pub fn is_same_kernel(&self, other: &Set) -> bool {
+		let longest_rules = if self.rules.len() < other.rules.len() { &other.rules } else { &self.rules };
+		let shortest_rules = if self.rules.len() < other.rules.len() { &self.rules } else { &other.rules };
+
+		for rule1 in longest_rules {
+			if !rule1.is_kernel_rule {
+				continue;
+			}
+
+			let mut found_matching_rule = false;
+			for rule2 in shortest_rules {
+				if rule2.is_kernel_rule
+					&& rule1.left == rule2.left
+					&& rule1.next_symbol_index == rule2.next_symbol_index
+					&& rule1.right == rule2.right {
+					found_matching_rule = true;
+				}
+			}
+
+			if !found_matching_rule {
+				return false;
+			}
+		}
+
+		return true;
+	}
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -25,7 +54,8 @@ pub struct TableRule {
 	left: String,
 	right: Vec<String>,
 	next_symbol_index: usize,
-	next_set_index: Option<usize>
+	next_set_index: Option<usize>,
+	is_kernel_rule: bool
 }
 
 impl TableRule {
@@ -34,7 +64,8 @@ impl TableRule {
 			left: left,
 			right: right,
 			next_symbol_index: 0,
-			next_set_index: None
+			next_set_index: None,
+			is_kernel_rule: true
 		}
 	}
 
@@ -42,6 +73,13 @@ impl TableRule {
 		let mut new_rule = self.clone();
 		new_rule.next_symbol_index = self.next_symbol_index + 1;
 		new_rule.next_set_index = None;
+		new_rule.is_kernel_rule = true;
+		return new_rule
+	}
+
+	pub fn clone_as_expanded_rule(&self) -> TableRule {
+		let mut new_rule = self.clone();
+		new_rule.is_kernel_rule = false;
 		return new_rule
 	}
 
@@ -119,6 +157,7 @@ impl ParseTable {
 					print!("*");
 				}
 				print!("  (S{})", rule.next_set_index.unwrap_or(99999));
+				print!("  (Kernel: {:?})", rule.is_kernel_rule);
 
 				println!("")
 			}
@@ -150,7 +189,7 @@ impl ParseTable {
 			}
 
 			let mut full_set = self.expand_set(set)?;
-			let new_sets = self.get_advanced_sets(&mut full_set, set_index + set_queue.len() + 1);
+			let new_sets = self.get_advanced_sets(&mut full_set, set_index + set_queue.len() + 1, &set_queue);
 			set_queue.extend(new_sets);
 			self.sets.push(full_set);
 			set_index += 1;
@@ -195,9 +234,10 @@ impl ParseTable {
 			let left = rule.right.get(rule.next_symbol_index).ok_or(ParseTableError::InvalidTableRule)?.clone(); // TODO: Check if this can be done without a clone but still follow the borrow checkers rules
 
 			for initial_rule in &self.rules {
-				// let no_loop = *initial_rule.right.first().unwrap() != left;
-				if initial_rule.left == *left && !set.rules.contains(initial_rule) {
-					set.rules.push(initial_rule.clone());
+				// TODO: Check if in set in a better way to avoid .Clone before we actually need it
+				let new_rule = initial_rule.clone_as_expanded_rule();
+				if initial_rule.left == *left && !set.rules.contains(&new_rule) {
+					set.rules.push(new_rule);
 				}
 			}
 
@@ -207,7 +247,7 @@ impl ParseTable {
 		Ok(set)
 	}
 
-	fn get_advanced_sets(&self, set: &mut Set, mut next_free_set_index: usize) -> Vec<Set> {
+	fn get_advanced_sets(&self, set: &mut Set, mut next_free_set_index: usize, set_queue: &VecDeque<Set>) -> Vec<Set> {
 		let mut advanced_sets: Vec<Set> = Vec::new();
 
 		for rule in &mut set.rules {
@@ -231,12 +271,19 @@ impl ParseTable {
 			if !added_to_set {
 				advanced_sets.push(Set{index: next_free_set_index, rules: vec![rule.clone_and_advance()]});
 				rule.next_set_index = Some(next_free_set_index);
-				println!("Added: {}, {:?}", next_free_set_index, advanced_sets.last().unwrap());
 				next_free_set_index += 1;
 			}
 		}
 
-		advanced_sets
+		let filtered_sets = advanced_sets
+			.iter()
+			.filter(|new_set| {
+				!self.sets.iter().any(|s| s.is_same_kernel(&new_set))
+				&& !set_queue.iter().any(|s| s.is_same_kernel(&new_set))
+				&& !set.is_same_kernel(&new_set)})
+			.cloned();
+
+		filtered_sets.collect()
 	}
 
 	fn populate_reductions(&mut self) {
