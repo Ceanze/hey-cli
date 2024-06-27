@@ -9,6 +9,7 @@ pub enum ParseTableError {
 }
 
 pub enum Action<'a> {
+	Accept,
 	Shift(usize),
 	Reduce(&'a TableRule),
 	Error(ParseTableError)
@@ -125,6 +126,10 @@ impl ParseTable {
 	pub fn get_action(&self, set_index: usize, symbol: &str) -> Action {
 		if let Some(set) = self.sets.get(set_index) {
 			for rule in &set.rules {
+				if rule.matches_lookahead(symbol) && symbol == "$" {
+					return Action::Accept;
+				}
+
 				if rule.matches_lookahead(symbol) {
 					return Action::Shift(rule.next_set_index.unwrap());
 				}
